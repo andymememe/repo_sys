@@ -100,7 +100,7 @@ func getPackagesByName(logger *log.Logger,
                               "Check repo: " + coll.Name()))
         cur, err = coll.Find(ctx, bson.M{
             "name": bson.M{
-                "$regex": ".*" + name + ".*"
+                "$regex": ".*" + name + ".*",
             },
         })
         if err != nil {
@@ -166,7 +166,14 @@ func main() {
     
 	r.GET("/get_packages", func(c *gin.Context) {
         package_name := c.Query("q")
-        packages, err := getPackages(logger, collections, package_name)
+        if package_name == "" {
+            c.Abort()
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Request the parameter q for package name.",
+            })
+            return
+        }
+        packages, err := getPackagesByName(logger, collections, package_name)
         if err != nil {
             c.Abort()
             c.JSON(http.StatusInternalServerError, gin.H{
