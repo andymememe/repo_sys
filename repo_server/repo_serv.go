@@ -55,11 +55,12 @@ func connectDB() (*mongo.Client, error) {
 }
 
 func getRepos(logger *log.Logger,
-              client *mongo.Client) ([]*mongo.Collection, time.Time, error) {
+              client *mongo.Client) (map[string]*mongo.Collection,
+                                     time.Time, error) {
     var repos Repos
-    var collections []*mongo.Collection
     var modifiedDate time.Time
     
+    collections := make(map[string]*mongo.Collection)
     filename := "repos.json"
     jsonFile, err := os.Open(filename)
     if err != nil {
@@ -79,25 +80,24 @@ func getRepos(logger *log.Logger,
     json.Unmarshal(byteValue, &repos)
     for _, element := range repos.Repos {
         logger.Println(logMsg("info", "getRepos", "Get repo: " + element))
-        collections = append(collections,
-                             client.Database("repo").Collection(element))
+        collections[element] = client.Database("repo").Collection(element)
     }
     
     return collections, modifiedDate, err
 }
 
 func getPackagesByName(logger *log.Logger,
-                 collections []*mongo.Collection,
-                 name string) ([]Package, error) {
+                       collections map[string]*mongo.Collection,
+                       name string) ([]Package, error) {
     var err error
     var packages []Package
     var cur *mongo.Cursor
     
     ctx := context.Background()
-    for _, coll := range collections {
+    for key, coll := range collections {
         logger.Println(logMsg("info",
-                              "getPackages",
-                              "Check repo: " + coll.Name()))
+                              "getPackagesByName",
+                              "Check repo: " + key))
         cur, err = coll.Find(ctx, bson.M{
             "name": bson.M{
                 "$regex": ".*" + name + ".*",
@@ -124,6 +124,45 @@ func getPackagesByName(logger *log.Logger,
     }
     
     return packages, err
+}
+
+func getPackagesByPkgName(logger *log.Logger,
+                          collections map[string]*mongo.Collection,
+                          pkg_name string,
+                          repo_name string) (Package, error) {
+    var err error
+    var pkg Package
+    var cur *mongo.Cursor
+    
+    ctx := context.Background()
+    logger.Println(logMsg("info",
+                          "getPackagesByPkgName",
+                          "Check repo: " + repo_name))
+    cur, err = collections[repo_name].Find(ctx, bson.M{
+        "package_name": pkg_name,
+    })
+    if err != nil {
+        return pkg, err
+    }
+    defer cur.Close(ctx)
+    
+    for cur.Next(ctx) {
+        pkg = Package{}
+        err = cur.Decode(&pkg)
+        if err != nil {
+            return pkg, err
+        }
+        logger.Println(logMsg("debug",
+                              "getPackagesByPkgName",
+                              pkg.Name))
+    }
+    
+    err = cur.Err()
+    if err != nil {
+        return pkg, err
+    }
+    
+    return pkg, err
 }
 
 func main() {
@@ -165,15 +204,16 @@ func main() {
 	})
     
 	r.GET("/get_packages", func(c *gin.Context) {
-        package_name := c.Query("q")
-        if package_name == "" {
+        query := c.Query("q")
+        if query == "" {
             c.Abort()
             c.JSON(http.StatusBadRequest, gin.H{
-                "message": "Request the parameter q for package name.",
+                "message": "Request the parameter q for name.",
             })
             return
         }
-        packages, err := getPackagesByName(logger, collections, package_name)
+        
+        packages, err := getPackagesByName(logger, collections, query)
         if err != nil {
             c.Abort()
             c.JSON(http.StatusInternalServerError, gin.H{
@@ -186,6 +226,60 @@ func main() {
 		c.JSON(200, gin.H{
 			"message": "ok",
             "packages": packages,
+		})
+	})
+    
+	r.GET("/get_package", func(c *gin.Context) {
+        package_name := c.Query("pkg")
+        repo_name := c.Query("repo")
+        if package_name == "" {
+            c.Abort()
+            c.JSON(http.StatusBadRequest, gin.H{
+                "message": "Request the parameter pkg for package name.",
+            })
+            return
+        }
+        
+        if repo_name == "" {
+            repo_name = "main"
+            logger.Println(logMsg("warn",
+                                  c.Request.URL.Path,
+                                  "Use default repo: main"))
+        }
+        
+        if _, ok := collections[repo_name]; !ok {
+            repo_name = "main"
+            logger.Println(logMsg("warn",
+                                  c.Request.URL.Path,
+                                  "Use default repo: main"))
+        }
+        
+        pkg, err := getPackagesByPkgName(logger,
+                                         collections,
+                                         package_name,
+                                         repo_name)
+        if err != nil {
+            c.Abort()
+            c.JSON(http.StatusInternalServerError, gin.H{
+                "message": "error",
+                "exception": err.Error(),
+            })
+            return
+        }
+        
+        if pkg.PackageName == "" {
+            c.Abort()
+            c.JSON(http.StatusNotFound, gin.H{
+                "message": "Package not found",
+                "repo": repo_name,
+            })
+            return
+        }
+        
+		c.JSON(200, gin.H{
+			"message": "ok",
+            "repo": repo_name,
+            "package": pkg,
 		})
 	})
     
