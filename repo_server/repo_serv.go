@@ -55,11 +55,12 @@ func connectDB() (*mongo.Client, error) {
 }
 
 func getRepos(logger *log.Logger,
-              client *mongo.Client) ([]*mongo.Collection, time.Time, error) {
+              client *mongo.Client) (map[string]*mongo.Collection,
+                                     time.Time, error) {
     var repos Repos
-    var collections []*mongo.Collection
     var modifiedDate time.Time
     
+    collections := make(map[string]*mongo.Collection)
     filename := "repos.json"
     jsonFile, err := os.Open(filename)
     if err != nil {
@@ -79,25 +80,24 @@ func getRepos(logger *log.Logger,
     json.Unmarshal(byteValue, &repos)
     for _, element := range repos.Repos {
         logger.Println(logMsg("info", "getRepos", "Get repo: " + element))
-        collections = append(collections,
-                             client.Database("repo").Collection(element))
+        collections[element] = client.Database("repo").Collection(element)
     }
     
     return collections, modifiedDate, err
 }
 
 func getPackagesByName(logger *log.Logger,
-                 collections []*mongo.Collection,
+                 collections map[string]*mongo.Collection,
                  name string) ([]Package, error) {
     var err error
     var packages []Package
     var cur *mongo.Cursor
     
     ctx := context.Background()
-    for _, coll := range collections {
+    for key, coll := range collections {
         logger.Println(logMsg("info",
                               "getPackages",
-                              "Check repo: " + coll.Name()))
+                              "Check repo: " + key))
         cur, err = coll.Find(ctx, bson.M{
             "name": bson.M{
                 "$regex": ".*" + name + ".*",
