@@ -1,6 +1,7 @@
 {
     "repos" : [
         "main",
-        "exp"
+        "exp",
+        "test"
     ]
 }
