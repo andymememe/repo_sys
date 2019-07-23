@@ -1,19 +1,19 @@
 package main
 
 import (
-    "go.mongodb.org/mongo-driver/mongo";
-    "go.mongodb.org/mongo-driver/mongo/options";
-    "go.mongodb.org/mongo-driver/bson";
-    "go.mongodb.org/mongo-driver/bson/primitive";
-    "github.com/gin-gonic/gin";
-    "log";
-    "fmt";
-    "os";
-    "time";
-    "context";
-    "io/ioutil";
-    "encoding/json";
-    "net/http";
+    "go.mongodb.org/mongo-driver/mongo"
+    "go.mongodb.org/mongo-driver/mongo/options"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/bson/primitive"
+    "github.com/gin-gonic/gin"
+    "log"
+    "fmt"
+    "os"
+    "time"
+    "context"
+    "io/ioutil"
+    "encoding/json"
+    "net/http"
 )
 
 type Repos struct {
