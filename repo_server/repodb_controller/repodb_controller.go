@@ -20,6 +20,7 @@ type Package struct {
 	PackageName string    `bson:"package_name" json:"package_name"`
 	LastUpdate  time.Time `bson:"last_update" json:"last_update"`
 	Status      string    `bson:"status" json:"status"`
+	RepoName    string
 }
 
 // RepoDBController defined DB connection for repo
@@ -116,6 +117,7 @@ func (r *RepoDBController) GetPackagesByName(repoNames []string, name string) ([
 			if err != nil {
 				return packages, err
 			}
+			elem.RepoName = repoName
 			packages = append(packages, *elem)
 		}
 
@@ -129,9 +131,9 @@ func (r *RepoDBController) GetPackagesByName(repoNames []string, name string) ([
 }
 
 // GetPackageByPkgName get packages by package name
-func (r *RepoDBController) GetPackageByPkgName(pkgName string, repoName string) (Package, error) {
+func (r *RepoDBController) GetPackageByPkgName(pkgName string, repoName string) (*Package, error) {
 	var err error
-	var pkg Package
+	var pkg *Package
 	var cur *mongo.Cursor
 
 	ctx := context.Background()
@@ -140,21 +142,22 @@ func (r *RepoDBController) GetPackageByPkgName(pkgName string, repoName string) 
 		"package_name": pkgName,
 	})
 	if err != nil {
-		return Package{}, err
+		return &Package{}, err
 	}
 	defer cur.Close(ctx)
 
 	for cur.Next(ctx) {
-		pkg = Package{}
-		err = cur.Decode(&pkg)
+		pkg = &Package{}
+		err = cur.Decode(pkg)
 		if err != nil {
-			return Package{}, err
+			return &Package{}, err
 		}
+		pkg.RepoName = repoName
 	}
 
 	err = cur.Err()
 	if err != nil {
-		return Package{}, err
+		return &Package{}, err
 	}
 
 	return pkg, nil

@@ -9,7 +9,8 @@ func packageEqual(a, b Package) bool {
 	return a.Name == b.Name &&
 		a.Version == b.Version &&
 		a.PackageName == b.PackageName &&
-		a.Status == b.Status
+		a.Status == b.Status &&
+		a.RepoName == b.RepoName
 }
 
 func packagesEqual(a, b []Package) bool {
@@ -106,6 +107,7 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 					Version:     "v1.0.0",
 					PackageName: "ph",
 					Status:      "online",
+					RepoName:    "test",
 				},
 			},
 			wantErr: false,
@@ -124,12 +126,14 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 					Version:     "v2.0.0",
 					PackageName: "ch",
 					Status:      "online",
+					RepoName:    "test",
 				},
 				Package{
 					Name:        "Placeholder",
 					Version:     "v1.0.0",
 					PackageName: "ph",
 					Status:      "online",
+					RepoName:    "test",
 				},
 			},
 			wantErr: false,
@@ -160,12 +164,14 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 					Version:     "v2.0.0",
 					PackageName: "ch",
 					Status:      "online",
+					RepoName:    "test",
 				},
 				Package{
 					Name:        "Placeholder",
 					Version:     "v1.0.0",
 					PackageName: "ph",
 					Status:      "online",
+					RepoName:    "test",
 				},
 			},
 			wantErr: false,
@@ -207,7 +213,7 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    Package
+		want    *Package
 		wantErr bool
 	}{
 		{
@@ -216,11 +222,12 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 				pkgName:  "ph",
 				repoName: "test",
 			},
-			want: Package{
+			want: &Package{
 				Name:        "Placeholder",
 				Version:     "v1.0.0",
 				PackageName: "ph",
 				Status:      "online",
+				RepoName:    "test",
 			},
 			wantErr: false,
 		},
@@ -230,7 +237,7 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 				pkgName:  "nopkg",
 				repoName: "test",
 			},
-			want:    Package{},
+			want:    nil,
 			wantErr: false,
 		},
 		{
@@ -239,7 +246,7 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 				pkgName:  "ph",
 				repoName: "norepo",
 			},
-			want:    Package{},
+			want:    nil,
 			wantErr: false,
 		},
 	}
@@ -253,7 +260,13 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 				t.Errorf("RepoDBController.GetPackageByPkgName() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !packageEqual(got, tt.want) {
+			if tt.want == nil && got != nil {
+				t.Errorf("RepoDBController.GetPackageByPkgName() = %v, want nil", got)
+				return
+			} else if tt.want == nil && got == nil {
+				return
+			}
+			if !packageEqual(*got, *tt.want) {
 				t.Errorf("RepoDBController.GetPackageByPkgName() = %v, want %v", got, tt.want)
 			}
 		})

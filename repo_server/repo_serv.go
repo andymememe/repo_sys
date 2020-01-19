@@ -162,7 +162,7 @@ func main() {
 				"Use default repo: main"))
 		}
 
-		if sliceContainString(repos.Repos, repoName) {
+		if !sliceContainString(repos.Repos, repoName) {
 			repoName = "main"
 			logger.Println(logMsg("warn",
 				c.Request.URL.Path,
@@ -179,7 +179,7 @@ func main() {
 			return
 		}
 
-		if pkg.PackageName == "" {
+		if pkg == nil {
 			c.Abort()
 			c.JSON(http.StatusNotFound, gin.H{
 				"message": "Package not found",
