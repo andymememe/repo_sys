@@ -23,6 +23,14 @@ go build repo_server.go
 ./repo_server
 ```
 
+#### RepoDB Controller
+In repo_server/repodb_controller folder.
+##### Test
+```bash
+cd repo_server/repodb_controller
+go test .
+```
+
 ### Client
 #### Command
 ```bash
