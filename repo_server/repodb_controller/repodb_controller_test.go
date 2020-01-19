@@ -27,22 +27,33 @@ func packagesEqual(a, b []Package) bool {
 
 func TestNewRepoDBController(t *testing.T) {
 	tests := []struct {
-		name string
-		want *RepoDBController
+		name    string
+		want    *RepoDBController
+		wantErr bool
 	}{
 		{
 			name: "Test New",
 			want: &RepoDBController{
-				host: "localhost",
-				user: "admin",
-				pwd:  "admin",
-				port: "27017",
+				Config: DBConfig{
+					Host: "localhost",
+					User: "admin",
+					Pwd:  "admin",
+					Port: "27017",
+				},
+				client: nil,
 			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewRepoDBController(); !reflect.DeepEqual(got, tt.want) {
+			got, err := NewRepoDBController("../config/config_template.yaml")
+			if (err != nil) && !tt.wantErr {
+				t.Errorf("NewRepoDBController() = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewRepoDBController() = %v, want %v", got, tt.want)
 			}
 		})
@@ -52,24 +63,19 @@ func TestNewRepoDBController(t *testing.T) {
 func TestRepoDBController_ConnectDB(t *testing.T) {
 	tests := []struct {
 		name    string
-		r       *RepoDBController
 		wantErr bool
 	}{
 		{
-			name: "Conn Success",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
+			name:    "Conn Success",
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
+		r, _ := NewRepoDBController("../config/config_secret.yaml")
 		t.Run(tt.name, func(t *testing.T) {
-			if err := tt.r.ConnectDB(); (err != nil) != tt.wantErr {
+			if err := r.ConnectDB(); (err != nil) != tt.wantErr {
 				t.Errorf("RepoDBController.ConnectDB() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
@@ -82,19 +88,12 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		r       *RepoDBController
 		args    args
 		want    []Package
 		wantErr bool
 	}{
 		{
 			name: "Has_all_repos_has_full_pkg_name_matching",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				repoNames: []string{
 					"test",
@@ -113,12 +112,6 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 		},
 		{
 			name: "Has_all_repos_has_partial_pkg_name_matching",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				repoNames: []string{
 					"test",
@@ -143,12 +136,6 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 		},
 		{
 			name: "Has_all_repos_no_pkg_name_matching",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				repoNames: []string{
 					"test",
@@ -160,12 +147,6 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 		},
 		{
 			name: "Has_some_repos_has_partial_pkg_name_matching",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				repoNames: []string{
 					"test",
@@ -191,12 +172,6 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 		},
 		{
 			name: "no_repo",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				repoNames: []string{
 					"norepo",
@@ -209,8 +184,10 @@ func TestRepoDBController_GetPackagesByName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.r.ConnectDB()
-			got, err := tt.r.GetPackagesByName(tt.args.repoNames, tt.args.name)
+			r, _ := NewRepoDBController("../config/config_secret.yaml")
+			r.ConnectDB()
+
+			got, err := r.GetPackagesByName(tt.args.repoNames, tt.args.name)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RepoDBController.GetPackagesByName() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -229,19 +206,12 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		r       *RepoDBController
 		args    args
 		want    Package
 		wantErr bool
 	}{
 		{
 			name: "has_repo_has_package",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				pkgName:  "ph",
 				repoName: "test",
@@ -256,12 +226,6 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 		},
 		{
 			name: "has_repo_no_package",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				pkgName:  "nopkg",
 				repoName: "test",
@@ -271,12 +235,6 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 		},
 		{
 			name: "no_repo",
-			r: &RepoDBController{
-				host: "localhost",
-				user: "repo",
-				pwd:  "reporepo",
-				port: "27017",
-			},
 			args: args{
 				pkgName:  "ph",
 				repoName: "norepo",
@@ -287,8 +245,10 @@ func TestRepoDBController_GetPackageByPkgName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.r.ConnectDB()
-			got, err := tt.r.GetPackageByPkgName(tt.args.pkgName, tt.args.repoName)
+			r, _ := NewRepoDBController("../config/config_secret.yaml")
+			r.ConnectDB()
+
+			got, err := r.GetPackageByPkgName(tt.args.pkgName, tt.args.repoName)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RepoDBController.GetPackageByPkgName() error = %v, wantErr %v", err, tt.wantErr)
 				return

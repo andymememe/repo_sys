@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,13 +9,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gopkg.in/yaml.v3"
 
 	repodbcontroller "repo_sys/repo_server/repodb_controller"
 )
 
 // Repos saves list of repo
 type Repos struct {
-	Repos []string `json:"repos"`
+	Repos []string `yaml:"repos"`
 }
 
 func sliceContainString(list []string, ele string) bool {
@@ -43,11 +43,7 @@ func getRepos(logger *log.Logger) (Repos, time.Time, error) {
 	var repos Repos
 	var modifiedDate time.Time
 
-	filename := "repos.json"
-	jsonFile, err := os.Open(filename)
-	if err != nil {
-		return Repos{}, time.Time{}, err
-	}
+	filename := "config/repos.yaml"
 
 	fileStat, err := os.Stat(filename)
 	if err != nil {
@@ -55,11 +51,11 @@ func getRepos(logger *log.Logger) (Repos, time.Time, error) {
 	}
 	modifiedDate = fileStat.ModTime()
 
-	byteValue, err := ioutil.ReadAll(jsonFile)
+	byteValue, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return Repos{}, time.Time{}, err
 	}
-	err = json.Unmarshal(byteValue, &repos)
+	err = yaml.Unmarshal(byteValue, &repos)
 	if err != nil {
 		return Repos{}, time.Time{}, err
 	}
@@ -69,18 +65,25 @@ func getRepos(logger *log.Logger) (Repos, time.Time, error) {
 
 func main() {
 	// Create log file
-	f, err := os.OpenFile("log/server.log",
+	f, err := os.OpenFile(
+		"log/server.log",
 		os.O_RDWR|os.O_CREATE|os.O_APPEND,
-		0666)
+		0666,
+	)
 	defer f.Close()
 	if err != nil {
 		panic(err.Error())
 	}
 	logger := createLog(f)
 
-	// Connect to DB
+	// New Controller
 	logger.Println(logMsg("info", "main", "Server starting..."))
-	repoDBController := repodbcontroller.NewRepoDBController()
+	repoDBController, err := repodbcontroller.NewRepoDBController("config/config_secret.yaml")
+	if err != nil {
+		logger.Panic(logMsg("err", "connectDB", err.Error()))
+	}
+
+	// Connect DB
 	err = repoDBController.ConnectDB()
 	if err != nil {
 		logger.Panic(logMsg("err", "connectDB", err.Error()))

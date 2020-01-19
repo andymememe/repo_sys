@@ -3,13 +3,14 @@ package repodbcontroller
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"time"
-
-	"go.mongodb.org/mongo-driver/mongo/readpref"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"gopkg.in/yaml.v3"
 )
 
 // Package struct
@@ -23,21 +24,33 @@ type Package struct {
 
 // RepoDBController defined DB connection for repo
 type RepoDBController struct {
-	host   string
-	user   string
-	pwd    string
-	port   string
+	Config DBConfig `yaml:"db"`
 	client *mongo.Client
 }
 
+// DBConfig has DB setting
+type DBConfig struct {
+	Host string `yaml:"host"`
+	Port string `yaml:"port"`
+	User string `yaml:"user"`
+	Pwd  string `yaml:"pwd"`
+}
+
 // NewRepoDBController new a RepoDBController
-func NewRepoDBController() *RepoDBController {
-	return &RepoDBController{
-		host: "localhost",
-		user: "admin",
-		pwd:  "admin",
-		port: "27017",
+func NewRepoDBController(configFile string) (*RepoDBController, error) {
+	var ctrl *RepoDBController
+
+	yamlCtn, err := ioutil.ReadFile(configFile)
+	if err != nil {
+		return nil, err
 	}
+
+	err = yaml.Unmarshal(yamlCtn, &ctrl)
+	if err != nil {
+		return nil, err
+	}
+
+	return ctrl, nil
 }
 
 // ConnectDB connect to repo DB
@@ -47,10 +60,10 @@ func (r *RepoDBController) ConnectDB() error {
 			Client().
 			ApplyURI(fmt.Sprintf(
 				"mongodb://%s:%s@%s:%s/repo",
-				r.user,
-				r.pwd,
-				r.host,
-				r.port,
+				r.Config.User,
+				r.Config.Pwd,
+				r.Config.Host,
+				r.Config.Port,
 			)),
 	)
 	if err != nil {
