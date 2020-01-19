@@ -7,14 +7,14 @@ A package repository written by Go lang.
 ##### Database
 - MongoDB
 ##### Go Packages
-- [Gin Server](github.com/gin-gonic/gin)
-- [mongo-driver](go.mongodb.org/mongo-driver)
-- [yaml.v3](gopkg.in/yaml.v3)
+- [Gin Server](https://github.com/gin-gonic/gin)
+- [mongo-driver](https://go.mongodb.org/mongo-driver)
+- [yaml.v3](https://gopkg.in/yaml.v3)
   
 #### DB Setting
-Copy *config/config_template.yaml* as *config/config_secret.yaml*. Change the DB setting inside the yaml file.</br>
+Copy [config/config_template.yaml](repo_server/config/config_template.yaml) as *config/config_secret.yaml*. Change the DB setting inside the yaml file.</br>
 You need a database in MongoDB call *repo*, and collection name is the name of repo.</br>
-You can add repo name in config/repos.yaml under *repos*.
+You can add repo name in [config/repos.yaml](repo_server/config/repos.yaml) under *repos*.
 
 #### Command
 ```bash
@@ -24,7 +24,7 @@ go build repo_server.go
 ```
 
 #### RepoDB Controller
-In repo_server/repodb_controller folder.
+In [repo_server/repodb_controller](repo_server/repodb_controller) folder.
 ##### Test
 ```bash
 cd repo_server/repodb_controller
